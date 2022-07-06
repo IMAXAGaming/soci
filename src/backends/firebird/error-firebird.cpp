@@ -28,6 +28,16 @@ firebird_soci_error::firebird_soci_error(std::string const & msg, ISC_STATUS con
     }
 }
 
+int firebird_soci_error::engine_code() const
+{
+	return (status_[0] == 1) ? (int)status_[1] : 0;
+}
+
+int firebird_soci_error::sql_code() const
+{
+	return isc_sqlcode(status_.data());
+}
+
 namespace details
 {
 

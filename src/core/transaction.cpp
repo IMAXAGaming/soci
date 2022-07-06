@@ -30,6 +30,11 @@ transaction::~transaction()
     }
 }
 
+bool transaction::is_open() const
+{
+	return !handled_;
+}
+
 void transaction::commit()
 {
     if (handled_)

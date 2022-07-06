@@ -14,7 +14,6 @@
 #endif
 
 #include <stdarg.h>
-#include <string.h>
 #include <string>
 #include <cstring>
 #include <cstdlib>

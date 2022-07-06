@@ -264,13 +264,19 @@ firebird_session_backend::firebird_session_backend(
     }
 }
 
+void firebird_session_backend::set_transaction_flags(const std::vector<ISC_SCHAR>& flags)
+{
+	trflags_ = flags;
+	if (trflags_.size())
+		trflags_.insert(trflags_.begin(), isc_tpb_version3);
+}
 
 void firebird_session_backend::begin()
 {
     if (trhp_ == 0)
     {
         ISC_STATUS stat[stat_size];
-        if (isc_start_transaction(stat, &trhp_, 1, &dbhp_, 0, NULL))
+        if (isc_start_transaction(stat, &trhp_, 1, &dbhp_, trflags_.size(), trflags_.data()))
         {
             throw_iscerror(stat);
         }
@@ -282,6 +288,11 @@ firebird_session_backend::~firebird_session_backend()
     cleanUp();
 }
 
+bool firebird_session_backend::is_in_transaction() const SOCI_NOEXCEPT
+{
+    return trhp_ == 0;
+}
+
 bool firebird_session_backend::is_connected()
 {
     ISC_STATUS stat[stat_size];
@@ -289,6 +300,32 @@ bool firebird_session_backend::is_connected()
     ISC_SCHAR res[256];
 
     return isc_database_info(stat, &dbhp_, sizeof(req), req, sizeof(res), res) == 0;
+}
+
+void firebird_session_backend::commit_retain()
+{
+    ISC_STATUS stat[stat_size];
+
+    if (trhp_ != 0)
+    {
+        if (isc_commit_retaining(stat, &trhp_))
+        {
+            throw_iscerror(stat);
+        }
+    }
+}
+
+void firebird_session_backend::rollback_retain()
+{
+    ISC_STATUS stat[stat_size];
+
+    if (trhp_ != 0)
+    {
+        if (isc_rollback_retaining(stat, &trhp_))
+        {
+            throw_iscerror(stat);
+        }
+    }
 }
 
 void firebird_session_backend::commit()

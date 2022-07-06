@@ -43,6 +43,9 @@ public:
 
     ~firebird_soci_error() SOCI_NOEXCEPT SOCI_OVERRIDE {};
 
+	int sql_code() const;
+	int engine_code() const;
+
     std::vector<ISC_STATUS> status_;
 };
 
@@ -308,9 +311,16 @@ struct firebird_session_backend : details::session_backend
 
     bool is_connected() SOCI_OVERRIDE;
 
+	bool is_in_transaction() const SOCI_NOEXCEPT;
+
+	void set_transaction_flags(const std::vector<ISC_SCHAR>& flags);
+
     void begin() SOCI_OVERRIDE;
     void commit() SOCI_OVERRIDE;
     void rollback() SOCI_OVERRIDE;
+
+	void commit_retain();
+    void rollback_retain();
 
     bool get_next_sequence_value(session & s,
         std::string const & sequence, long long & value) SOCI_OVERRIDE;
@@ -336,6 +346,7 @@ struct firebird_session_backend : details::session_backend
     isc_db_handle dbhp_;
 
 private:
+	std::vector<ISC_SCHAR> trflags_;
     isc_tr_handle trhp_;
     bool decimals_as_strings_;
 };

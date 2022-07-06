@@ -24,6 +24,8 @@ public:
     void commit();
     void rollback();
 
+	bool is_open() const;
+
 private:
     bool handled_;
     session& sql_;

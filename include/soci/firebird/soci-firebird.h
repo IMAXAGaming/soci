@@ -25,6 +25,9 @@
 #include <cstdlib>
 #include <vector>
 #include <string>
+#include <mutex>
+#include <atomic>
+#include <functional>
 
 namespace soci
 {
@@ -345,10 +348,36 @@ struct firebird_session_backend : details::session_backend
 
     isc_db_handle dbhp_;
 
+	void clear_registered_events();
+
+	void register_event(const std::string& ev);
+
+	void unregister_event(const std::string& ev);
+
+	void stop_event_listener();
+
+	bool start_event_listener();
+
+	void trigger_events(std::map<std::string, size_t>& outEvents);
+
 private:
+	std::atomic<bool> has_events_ = false;
+	std::vector<std::string> registered_events_;
+	std::mutex event_listener_mutex_;
+	ISC_LONG event_listen_handle_ = 0;
+	std::vector<uint8_t> event_buffer_;
+	std::vector<uint8_t> event_results_;
+	std::map<std::string, size_t> triggered_events_;
+
 	std::vector<ISC_SCHAR> trflags_;
     isc_tr_handle trhp_;
     bool decimals_as_strings_;
+
+	void free_event_buffers();
+
+	void listen();
+
+	static void event_handler(void* object, ISC_USHORT size, const ISC_UCHAR* tmpbuffer);
 };
 
 struct firebird_backend_factory : backend_factory

@@ -398,6 +398,7 @@ firebird_statement_backend::execute(int number)
     }
 
     // make sure there is no active cursor
+	/* NOT NEEDED UNLESS A CURSOR IS CREATED WITH isc_dsql_set_cursor_name!
     if (isc_dsql_free_statement(stat, &stmtp_, DSQL_close))
     {
         // ignore attempt to close already closed cursor
@@ -406,6 +407,7 @@ firebird_statement_backend::execute(int number)
             throw_iscerror(stat);
         }
     }
+	*/
 
     if (useType_ == eVector)
     {

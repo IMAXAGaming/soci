@@ -381,6 +381,8 @@ void firebird_session_backend::cleanUp()
         trhp_ = 0;
     }
 
+	stop_event_listener();
+
     if (isc_detach_database(stat, &dbhp_))
     {
         throw_iscerror(stat);
@@ -412,4 +414,190 @@ details::rowid_backend* firebird_session_backend::make_rowid_backend()
 firebird_blob_backend * firebird_session_backend::make_blob_backend()
 {
     return new firebird_blob_backend(*this);
+}
+
+void firebird_session_backend::clear_registered_events()
+{
+	registered_events_.clear();
+
+	stop_event_listener();
+}
+
+void firebird_session_backend::register_event(const std::string& ev)
+{
+	auto find = std::find(registered_events_.begin(), registered_events_.end(), ev);
+	if (find == registered_events_.end())
+		registered_events_.push_back(ev);
+}
+
+void firebird_session_backend::unregister_event(const std::string& ev)
+{
+	auto find = std::find(registered_events_.begin(), registered_events_.end(), ev);
+	if (find != registered_events_.end())
+		registered_events_.erase(find);
+}
+
+void firebird_session_backend::free_event_buffers()
+{
+	event_buffer_.clear();
+	event_results_.clear();
+}
+
+void firebird_session_backend::stop_event_listener()
+{
+	std::unique_lock lock(event_listener_mutex_);
+	if (event_listen_handle_)
+	{
+ 		ISC_STATUS stat[stat_size];
+		if (isc_cancel_events(stat, &dbhp_, &event_listen_handle_))
+		{
+			throw_iscerror(stat);
+		}
+		free_event_buffers();
+		event_listen_handle_ = 0;
+		lock.unlock();
+	}
+}
+
+class event_iterator
+{
+	private:
+	uint8_t* pos;
+
+	public:
+	event_iterator& operator++()
+	{
+ 		pos += 1 + static_cast<int>(*pos) + 4;
+		return *this;
+	}
+
+	bool operator==(uint8_t* buf_pos) const
+	{
+		return pos == buf_pos;
+	}
+
+	std::string get_name() const
+	{
+		return std::string(pos + 1, pos + 1 + static_cast<int>(*pos));
+	}
+
+	uint32_t get_count() const
+	{
+		return isc_vax_integer(reinterpret_cast<const ISC_SCHAR*>(pos + 1 + *pos), 4);
+	}
+
+	void set_count_to(const event_iterator& it)
+	{
+		std::memcpy(pos + 1 + *pos, it.pos + 1 + *it.pos, 4);
+	}
+
+	event_iterator(uint8_t* buf)
+	{
+		pos = buf + 1;
+	}
+};
+
+
+void firebird_session_backend::event_handler(void* object, ISC_USHORT size, const ISC_UCHAR* tmpbuffer)
+{
+	// >>>>> This method is a STATIC member !! <<<<<
+	// Consider this method as a kind of "interrupt handler". It should do as
+	// few work as possible as quickly as possible and then return.
+	// Never forget: this is called by the Firebird client code, on *some*
+	// thread which might not be (and won't probably be) any of your application
+	// thread. This function is to be considered as an "interrupt-handler" of a
+	// hardware driver.
+
+	// There can be spurious calls to EventHandler from FB internal. We must
+	// dismiss those calls.
+	if (object == nullptr || size == 0 || tmpbuffer == nullptr)
+		return;
+		
+	firebird_session_backend* backend = (firebird_session_backend*)object;
+
+	std::lock_guard lock(backend->event_listener_mutex_);
+	if (backend->event_listen_handle_)
+	{
+		std::memcpy(backend->event_results_.data(), tmpbuffer, size);
+
+		event_iterator prev_state = backend->event_buffer_.data();
+		for (event_iterator new_state = backend->event_results_.data(); new_state != backend->event_results_.data() + size; ++new_state, ++prev_state)
+		{
+			const uint32_t prev_num_triggered = prev_state.get_count();
+			const uint32_t num_triggered = new_state.get_count();
+			if (num_triggered != prev_num_triggered)
+			{
+				backend->has_events_ = true;
+				auto this_event = backend->triggered_events_.try_emplace(new_state.get_name(), 0);
+				this_event.first->second += num_triggered - prev_num_triggered;
+				prev_state.set_count_to(new_state);
+			}
+		}
+
+		backend->listen();
+	}
+}
+
+void firebird_session_backend::listen()
+{
+	event_listen_handle_ = 0;
+	ISC_STATUS stat[stat_size];
+	if (isc_que_events(stat, &dbhp_, &event_listen_handle_, event_buffer_.size(), reinterpret_cast<ISC_UCHAR*>(event_buffer_.data()), (ISC_EVENT_CALLBACK)&firebird_session_backend::event_handler, this))
+	{
+		free_event_buffers();
+		throw_iscerror(stat);
+	}
+}
+
+void firebird_session_backend::trigger_events(std::map<std::string, size_t>& outEvents)
+{
+	if (has_events_.exchange(false))
+	{
+		std::lock_guard lock(event_listener_mutex_);
+		outEvents.swap(triggered_events_);
+	}
+}
+
+void isc_event_block_from_vector(std::vector<uint8_t>& event_buffer, std::vector<uint8_t>& result_buffer, const std::vector<std::string>& events)
+{
+
+	// calculate length of event parameter block, setting initial length to include version
+	// and counts for each argument
+	size_t length = 1;
+	for (const std::string& ev : events)
+		length += ev.length() + 1 + 4;
+
+	event_buffer.clear();
+	result_buffer.clear();
+	event_buffer.resize(length, 0);
+	result_buffer.resize(length, 0);
+
+	size_t offset = 0;
+	event_buffer[offset++] = 1; // EPB_version1
+
+	for(const std::string& ev : events)
+	{
+		event_buffer[offset++] = ev.length(); 
+		std::memcpy(event_buffer.data() + offset, ev.c_str(), ev.length());
+		offset += ev.length() + 4; // 4 bytes for event count
+	}
+}
+
+bool firebird_session_backend::start_event_listener()
+{
+	if (event_listen_handle_)
+		return false;
+	
+	if (registered_events_.empty())
+		return false;
+
+	isc_event_block_from_vector(event_buffer_, event_results_, registered_events_);
+
+	if (!event_buffer_.size())
+		return false;
+
+	std::lock_guard lock(event_listener_mutex_);
+	listen();
+
+	return event_listen_handle_;
 }

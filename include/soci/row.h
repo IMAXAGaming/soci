@@ -61,6 +61,48 @@ public:
     column_properties const& get_properties(std::size_t pos) const;
     column_properties const& get_properties(std::string const& name) const;
 
+	template <typename T>
+    T get_casted(std::size_t pos) const
+    {
+		switch (columns_.at(pos).get_data_type())
+		{
+			case dt_double:
+			{
+				double out;
+				type_conversion<double>::from_base(holders_.at(pos)->get<double>(), *indicators_.at(pos), out);
+				return static_cast<T>(out);
+				break;
+			}
+			case dt_integer:
+			{
+				int out;
+				type_conversion<int>::from_base(holders_.at(pos)->get<int>(), *indicators_.at(pos), out);
+				return static_cast<T>(out);
+				break;
+			}
+			case dt_long_long:
+			{
+				long long out;
+				type_conversion<long long>::from_base(holders_.at(pos)->get<long long>(), *indicators_.at(pos), out);
+				return static_cast<T>(out);
+				break;
+			}
+			case dt_unsigned_long_long:
+			{
+				unsigned long long out;
+				type_conversion<unsigned long long>::from_base(holders_.at(pos)->get<unsigned long long>(), *indicators_.at(pos), out);
+				return static_cast<T>(out);
+				break;
+			}
+			default:
+			{
+				T ret;
+				type_conversion<T>::from_base(holders_.at(pos)->get<T>(), *indicators_.at(pos), ret);
+				return ret;
+			}
+		}
+    }
+
     template <typename T>
     T get(std::size_t pos) const
     {
@@ -88,6 +130,13 @@ public:
     {
         std::size_t const pos = find_column(name);
         return get<T>(pos);
+    }
+
+	template <typename T>
+    T get_casted(std::string const &name) const
+    {
+        std::size_t const pos = find_column(name);
+        return get_casted<T>(pos);
     }
 
     template <typename T>

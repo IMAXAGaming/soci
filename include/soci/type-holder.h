@@ -30,9 +30,9 @@ public:
     virtual ~holder() {}
 
     template<typename T>
-    T get()
+    T get() const
     {
-        type_holder<T>* p = dynamic_cast<type_holder<T> *>(this);
+        const type_holder<T>* p = dynamic_cast<const type_holder<T> *>(this);
         if (p)
         {
             return p->template value<T>();
@@ -42,11 +42,6 @@ public:
             throw std::bad_cast();
         }
     }
-
-private:
-
-    template<typename T>
-    T value();
 };
 
 template <typename T>

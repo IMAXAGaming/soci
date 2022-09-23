@@ -267,8 +267,14 @@ firebird_session_backend::firebird_session_backend(
 void firebird_session_backend::set_transaction_flags(const std::vector<ISC_SCHAR>& flags)
 {
 	trflags_ = flags;
-	if (trflags_.size())
+	if (!trflags_.empty() && trflags_[0] != isc_tpb_version3)
 		trflags_.insert(trflags_.begin(), isc_tpb_version3);
+}
+
+const std::vector<ISC_SCHAR> NoFlags;
+const std::vector<ISC_SCHAR>& firebird_session_backend::active_transaction_flags() const
+{
+	return is_in_transaction() ? trflags_ : NoFlags;
 }
 
 void firebird_session_backend::begin()
@@ -290,7 +296,7 @@ firebird_session_backend::~firebird_session_backend()
 
 bool firebird_session_backend::is_in_transaction() const SOCI_NOEXCEPT
 {
-    return trhp_ == 0;
+    return trhp_ != 0;
 }
 
 bool firebird_session_backend::is_connected()
@@ -340,6 +346,7 @@ void firebird_session_backend::commit()
         }
 
         trhp_ = 0;
+		trflags_.clear();
     }
 }
 
@@ -355,6 +362,7 @@ void firebird_session_backend::rollback()
         }
 
         trhp_ = 0;
+		trflags_.clear();
     }
 }
 
@@ -379,6 +387,7 @@ void firebird_session_backend::cleanUp()
         }
 
         trhp_ = 0;
+		trflags_.clear();
     }
 
 	stop_event_listener();

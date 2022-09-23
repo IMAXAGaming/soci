@@ -318,6 +318,8 @@ struct firebird_session_backend : details::session_backend
 
 	void set_transaction_flags(const std::vector<ISC_SCHAR>& flags);
 
+	const std::vector<ISC_SCHAR>& active_transaction_flags() const;
+
     void begin() SOCI_OVERRIDE;
     void commit() SOCI_OVERRIDE;
     void rollback() SOCI_OVERRIDE;

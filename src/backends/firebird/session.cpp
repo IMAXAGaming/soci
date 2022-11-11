@@ -607,8 +607,8 @@ void firebird_session_backend::service_disconnect(isc_svc_handle handle)
 	int res = isc_service_detach(stat, &handle);
 	if (res)
 		printf("Disconnect problem: %d\n", res);
-	else
-		printf("Disconnect OK!\n");
+	/*else
+		printf("Disconnect OK!\n");*/
 }
 
 int firebird_session_backend::set_forced_writes(isc_svc_handle handle, const std::string& database_file, bool bEnabled)

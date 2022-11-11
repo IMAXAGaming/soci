@@ -362,6 +362,12 @@ struct firebird_session_backend : details::session_backend
 
 	void trigger_events(std::map<std::string, size_t>& outEvents);
 
+	isc_svc_handle service_connect(const std::string& server, const std::string& user, const std::string& pass);
+
+	void service_disconnect(isc_svc_handle handle);
+
+	int set_forced_writes(isc_svc_handle handle, const std::string& database_file, bool bEnabled);
+
 private:
 	std::atomic<bool> has_events_ = false;
 	std::vector<std::string> registered_events_;
@@ -378,6 +384,8 @@ private:
 	void free_event_buffers();
 
 	void listen();
+
+	int wait_for_service_result(isc_svc_handle handle);
 
 	static void event_handler(void* object, ISC_USHORT size, const ISC_UCHAR* tmpbuffer);
 };

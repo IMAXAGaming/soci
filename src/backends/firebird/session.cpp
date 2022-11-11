@@ -14,6 +14,14 @@
 #include <sstream>
 #include <string>
 
+#ifdef _WIN32
+#include <Windows.h>
+#define Sleep(time) Sleep(time)
+#else
+#include <unistd.h>
+#define Sleep(time) usleep(time*1000)
+#endif
+
 using namespace soci;
 using namespace soci::details::firebird;
 
@@ -564,6 +572,93 @@ void firebird_session_backend::trigger_events(std::map<std::string, size_t>& out
 	{
 		std::lock_guard lock(event_listener_mutex_);
 		outEvents.swap(triggered_events_);
+	}
+}
+
+isc_svc_handle firebird_session_backend::service_connect(const std::string& server, const std::string& user, const std::string& pass)
+{
+	std::string service_name;
+	if (!server.empty())
+	{
+		service_name = server + ":";
+	}
+
+	service_name += "service_mgr";
+
+	ISC_STATUS stat[stat_size];
+	std::vector<ISC_SCHAR> spb({isc_spb_version, isc_spb_current_version, isc_spb_user_name});
+	spb.push_back(user.length());
+	spb.insert(spb.end(), user.begin(), user.end());
+	spb.push_back(isc_spb_password);
+	spb.push_back(pass.length());
+	spb.insert(spb.end(), pass.begin(), pass.end());
+
+	isc_svc_handle service_handle = 0;
+	int res = isc_service_attach(stat, 0, service_name.c_str(), &service_handle, spb.size(), spb.data());
+	if (res)
+		printf("Service could not be created: %d\n", res);
+
+	return service_handle;
+}
+
+void firebird_session_backend::service_disconnect(isc_svc_handle handle)
+{
+	ISC_STATUS stat[stat_size];
+	int res = isc_service_detach(stat, &handle);
+	if (res)
+		printf("Disconnect problem: %d\n", res);
+	else
+		printf("Disconnect OK!\n");
+}
+
+int firebird_session_backend::set_forced_writes(isc_svc_handle handle, const std::string& database_file, bool bEnabled)
+{
+	std::vector<ISC_SCHAR> spb({isc_action_svc_properties, isc_spb_dbname});
+	int16_t size = database_file.length();
+	size = isc_portable_integer(reinterpret_cast<const ISC_UCHAR*>(&size), 2);
+	spb.insert(spb.end(), reinterpret_cast<const ISC_SCHAR*>(&size), reinterpret_cast<const ISC_SCHAR*>(&size) + 2);
+	spb.insert(spb.end(), database_file.begin(), database_file.end());
+	spb.push_back(isc_spb_prp_write_mode);
+	spb.push_back(bEnabled ? isc_spb_prp_wm_sync : isc_spb_prp_wm_async);
+
+	ISC_STATUS stat[stat_size];
+	int ret = isc_service_start(stat, &handle, NULL, spb.size(), spb.data());
+
+	if (ret)
+	{
+		printf("Service could not be started: %d\n", ret);
+		return ret;
+	}
+	
+	return wait_for_service_result(handle);
+}
+
+int firebird_session_backend::wait_for_service_result(isc_svc_handle handle)
+{
+	std::vector<ISC_SCHAR> spb({isc_info_svc_line});
+
+	for (;;)
+	{
+		Sleep(1);
+		ISC_STATUS stat[stat_size];
+		std::array<ISC_SCHAR, 1024> result;
+		int ret = isc_service_query(stat, &handle, NULL, 0, NULL, spb.size(), spb.data(), result.size(), result.data());
+		if (ret)
+		{
+			printf("Service query failed: %d\n", ret);
+			return ret;
+		}
+		
+		size_t pos = std::find(result.begin(), result.end(), isc_info_svc_line) - result.begin();
+		if (pos >= result.size())
+		{
+			printf("Bad service query response!\n");
+			return -1;
+		}
+		
+		int str_len = isc_portable_integer(reinterpret_cast<const ISC_UCHAR*>(result.data() + pos + 1), 2);
+		if (str_len == 0) // If message length is	zero bytes,	task is	finished
+			return 0;
 	}
 }
 

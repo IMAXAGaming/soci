@@ -81,6 +81,11 @@ public:
         return tmp;
     }
 
+	operator bool() const
+	{
+		return define_;
+	}
+
     // Comparison operators
 
     bool operator==(rowset_iterator const & rhs) const

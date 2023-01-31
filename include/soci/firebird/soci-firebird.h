@@ -366,7 +366,7 @@ struct firebird_session_backend : details::session_backend
 
 	void service_disconnect(isc_svc_handle handle);
 
-	int set_forced_writes(isc_svc_handle handle, const std::string& database_file, bool bEnabled);
+	int set_db_options(isc_svc_handle handle, const std::string& database_file, const std::vector<ISC_SCHAR>& options);
 
 private:
 	std::atomic<bool> has_events_ = false;

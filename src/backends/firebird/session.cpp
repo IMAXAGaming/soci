@@ -611,15 +611,14 @@ void firebird_session_backend::service_disconnect(isc_svc_handle handle)
 		printf("Disconnect OK!\n");*/
 }
 
-int firebird_session_backend::set_forced_writes(isc_svc_handle handle, const std::string& database_file, bool bEnabled)
+int firebird_session_backend::set_db_options(isc_svc_handle handle, const std::string& database_file, const std::vector<ISC_SCHAR>& options)
 {
 	std::vector<ISC_SCHAR> spb({isc_action_svc_properties, isc_spb_dbname});
 	int16_t size = database_file.length();
 	size = isc_portable_integer(reinterpret_cast<const ISC_UCHAR*>(&size), 2);
 	spb.insert(spb.end(), reinterpret_cast<const ISC_SCHAR*>(&size), reinterpret_cast<const ISC_SCHAR*>(&size) + 2);
 	spb.insert(spb.end(), database_file.begin(), database_file.end());
-	spb.push_back(isc_spb_prp_write_mode);
-	spb.push_back(bEnabled ? isc_spb_prp_wm_sync : isc_spb_prp_wm_async);
+	spb.insert(spb.end(), options.begin(), options.end());
 
 	ISC_STATUS stat[stat_size];
 	int ret = isc_service_start(stat, &handle, NULL, spb.size(), spb.data());

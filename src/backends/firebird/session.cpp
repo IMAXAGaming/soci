@@ -594,7 +594,7 @@ isc_svc_handle firebird_session_backend::service_connect(const std::string& serv
 	spb.insert(spb.end(), pass.begin(), pass.end());
 
 	isc_svc_handle service_handle = 0;
-	int res = isc_service_attach(stat, 0, service_name.c_str(), &service_handle, spb.size(), spb.data());
+	int res = isc_service_attach(stat, service_name.size(), service_name.c_str(), &service_handle, spb.size(), spb.data());
 	if (res)
 		printf("Service could not be created: %d\n", res);
 

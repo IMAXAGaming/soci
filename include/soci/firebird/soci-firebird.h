@@ -314,11 +314,7 @@ struct firebird_session_backend : details::session_backend
 
     bool is_connected() SOCI_OVERRIDE;
 
-	bool is_in_transaction() const SOCI_NOEXCEPT;
-
-	void set_transaction_flags(const std::vector<ISC_SCHAR>& flags);
-
-	const std::vector<ISC_SCHAR>& active_transaction_flags() const;
+    bool is_in_transaction() const SOCI_NOEXCEPT SOCI_OVERRIDE;
 
     void begin() SOCI_OVERRIDE;
     void commit() SOCI_OVERRIDE;
@@ -377,7 +373,6 @@ private:
 	std::vector<uint8_t> event_results_;
 	std::map<std::string, size_t> triggered_events_;
 
-	std::vector<ISC_SCHAR> trflags_;
     isc_tr_handle trhp_;
     bool decimals_as_strings_;
 

@@ -272,19 +272,6 @@ firebird_session_backend::firebird_session_backend(
     }
 }
 
-void firebird_session_backend::set_transaction_flags(const std::vector<ISC_SCHAR>& flags)
-{
-	trflags_ = flags;
-	if (!trflags_.empty() && trflags_[0] != isc_tpb_version3)
-		trflags_.insert(trflags_.begin(), isc_tpb_version3);
-}
-
-const std::vector<ISC_SCHAR> NoFlags;
-const std::vector<ISC_SCHAR>& firebird_session_backend::active_transaction_flags() const
-{
-	return is_in_transaction() ? trflags_ : NoFlags;
-}
-
 void firebird_session_backend::begin()
 {
     if (trhp_ == 0)
@@ -529,7 +516,7 @@ void firebird_session_backend::event_handler(void* object, ISC_USHORT size, cons
 	// dismiss those calls.
 	if (object == nullptr || size == 0 || tmpbuffer == nullptr)
 		return;
-		
+
 	firebird_session_backend* backend = (firebird_session_backend*)object;
 
 	std::lock_guard lock(backend->event_listener_mutex_);
@@ -628,7 +615,7 @@ int firebird_session_backend::set_db_options(isc_svc_handle handle, const std::s
 		printf("Service could not be started: %d\n", ret);
 		return ret;
 	}
-	
+
 	return wait_for_service_result(handle);
 }
 
@@ -647,14 +634,14 @@ int firebird_session_backend::wait_for_service_result(isc_svc_handle handle)
 			printf("Service query failed: %d\n", ret);
 			return ret;
 		}
-		
+
 		size_t pos = std::find(result.begin(), result.end(), isc_info_svc_line) - result.begin();
 		if (pos >= result.size())
 		{
 			printf("Bad service query response!\n");
 			return -1;
 		}
-		
+
 		int str_len = isc_portable_integer(reinterpret_cast<const ISC_UCHAR*>(result.data() + pos + 1), 2);
 		if (str_len == 0) // If message length is	zero bytes,	task is	finished
 			return 0;
@@ -680,7 +667,7 @@ void isc_event_block_from_vector(std::vector<uint8_t>& event_buffer, std::vector
 
 	for(const std::string& ev : events)
 	{
-		event_buffer[offset++] = ev.length(); 
+		event_buffer[offset++] = ev.length();
 		std::memcpy(event_buffer.data() + offset, ev.c_str(), ev.length());
 		offset += ev.length() + 4; // 4 bytes for event count
 	}
@@ -690,7 +677,7 @@ bool firebird_session_backend::start_event_listener()
 {
 	if (event_listen_handle_)
 		return false;
-	
+
 	if (registered_events_.empty())
 		return false;
 

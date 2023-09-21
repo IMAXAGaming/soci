@@ -92,17 +92,22 @@ bool postgresql_session_backend::is_connected()
 
 void postgresql_session_backend::begin()
 {
+    // We need to map transaction flags from Firebird/ibase ones
+    // to the ones PostgreSQL uses.
+    in_transaction_ = true;
     hard_exec(*this, conn_, "BEGIN", "Cannot begin transaction.");
 }
 
 void postgresql_session_backend::commit()
 {
     hard_exec(*this, conn_, "COMMIT", "Cannot commit transaction.");
+    in_transaction_ = false;
 }
 
 void postgresql_session_backend::rollback()
 {
     hard_exec(*this, conn_, "ROLLBACK", "Cannot rollback transaction.");
+    in_transaction_ = false;
 }
 
 void postgresql_session_backend::deallocate_prepared_statement(

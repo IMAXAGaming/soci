@@ -10,11 +10,15 @@
 
 #include "soci/soci-platform.h"
 #include "soci/error.h"
+
+#include <ibase.h>
+
 // std
 #include <cstddef>
 #include <map>
 #include <string>
 #include <sstream>
+#include <vector>
 
 namespace soci
 {
@@ -263,7 +267,16 @@ public:
 
     virtual bool is_connected() = 0;
 
-    virtual void begin() = 0;
+    virtual bool is_in_transaction() const SOCI_NOEXCEPT = 0;
+    void set_transaction_flags(const std::vector<ISC_SCHAR>& flags)
+    {
+		trflags_ = flags;
+		if (!trflags_.empty() && trflags_[0] != isc_tpb_version3)
+			trflags_.insert(trflags_.begin(), isc_tpb_version3);
+	};
+	const std::vector<ISC_SCHAR>& active_transaction_flags() const { return is_in_transaction() ? trflags_ : NoFlags; };
+
+	virtual void begin() = 0;
     virtual void commit() = 0;
     virtual void rollback() = 0;
 
@@ -462,6 +475,10 @@ public:
 
 private:
     SOCI_NOT_COPYABLE(session_backend)
+
+protected:
+    std::vector<ISC_SCHAR> trflags_;
+    const std::vector<ISC_SCHAR> NoFlags;
 };
 
 } // namespace details

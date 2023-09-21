@@ -272,12 +272,44 @@ firebird_session_backend::firebird_session_backend(
     }
 }
 
+void firebird_session_backend::convert_tr_flags(std::vector<ISC_SCHAR> & flags) SOCI_NOEXCEPT
+{
+    if (flags.empty())
+        flags.push_back((ISC_SCHAR)isc_tpb_version3);
+    for (auto trf : trflags_)
+    {
+        switch(trf)
+        {
+        case details::trf_read:
+            flags.push_back((ISC_SCHAR)isc_tpb_read);
+            break;
+        case details::trf_write:
+            flags.push_back((ISC_SCHAR)isc_tpb_write);
+            break;
+        case details::trf_read_commited:
+            flags.push_back((ISC_SCHAR)isc_tpb_read_committed);
+            break;
+        case details::trf_rec_version:
+            flags.push_back((ISC_SCHAR)isc_tpb_rec_version);
+            break;
+        case details::trf_wait:
+            flags.push_back((ISC_SCHAR)isc_tpb_wait);
+            break;
+        case details::trf_nowait:
+            flags.push_back((ISC_SCHAR)isc_tpb_nowait);
+            break;
+        }
+    }
+}
+
 void firebird_session_backend::begin()
 {
     if (trhp_ == 0)
     {
+        std::vector<ISC_SCHAR> local_flags;
         ISC_STATUS stat[stat_size];
-        if (isc_start_transaction(stat, &trhp_, 1, &dbhp_, trflags_.size(), trflags_.data()))
+        convert_tr_flags(local_flags);
+        if (isc_start_transaction(stat, &trhp_, 1, &dbhp_, local_flags.size(), local_flags.data()))
         {
             throw_iscerror(stat);
         }

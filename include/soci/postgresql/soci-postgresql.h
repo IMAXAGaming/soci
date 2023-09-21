@@ -367,7 +367,7 @@ struct postgresql_session_backend : details::session_backend
 
     bool is_connected() SOCI_OVERRIDE;
 
-    bool is_in_transaction() const SOCI_NOEXCEPT override { return in_transaction_; };
+    bool is_in_transaction() const SOCI_NOEXCEPT SOCI_OVERRIDE { return in_transaction_; };
 
     void begin() SOCI_OVERRIDE;
     void commit() SOCI_OVERRIDE;

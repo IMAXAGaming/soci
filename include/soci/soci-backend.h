@@ -11,8 +11,6 @@
 #include "soci/soci-platform.h"
 #include "soci/error.h"
 
-#include <ibase.h>
-
 // std
 #include <cstddef>
 #include <map>
@@ -63,6 +61,17 @@ enum statement_type
 {
     st_one_time_query,
     st_repeatable_query
+};
+
+// transaction flags
+enum transaction_flag
+{
+    trf_read,
+    trf_write,
+    trf_read_commited,
+    trf_rec_version,
+    trf_wait,
+    trf_nowait,
 };
 
 // polymorphic into type backend
@@ -268,13 +277,8 @@ public:
     virtual bool is_connected() = 0;
 
     virtual bool is_in_transaction() const SOCI_NOEXCEPT = 0;
-    void set_transaction_flags(const std::vector<ISC_SCHAR>& flags)
-    {
-		trflags_ = flags;
-		if (!trflags_.empty() && trflags_[0] != isc_tpb_version3)
-			trflags_.insert(trflags_.begin(), isc_tpb_version3);
-	};
-	const std::vector<ISC_SCHAR>& active_transaction_flags() const { return is_in_transaction() ? trflags_ : NoFlags; };
+    void set_transaction_flags(const std::vector<transaction_flag>& flags) { trflags_ = flags; };
+	const std::vector<transaction_flag>& active_transaction_flags() const { return is_in_transaction() ? trflags_ : NoTRFlags; };
 
 	virtual void begin() = 0;
     virtual void commit() = 0;
@@ -479,8 +483,8 @@ private:
     SOCI_NOT_COPYABLE(session_backend)
 
 protected:
-    std::vector<ISC_SCHAR> trflags_;
-    const std::vector<ISC_SCHAR> NoFlags;
+    std::vector<transaction_flag> trflags_;
+    const std::vector<transaction_flag> NoTRFlags;
 };
 
 } // namespace details

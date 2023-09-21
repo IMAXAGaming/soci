@@ -315,6 +315,7 @@ struct firebird_session_backend : details::session_backend
     bool is_connected() SOCI_OVERRIDE;
 
     bool is_in_transaction() const SOCI_NOEXCEPT SOCI_OVERRIDE;
+    void convert_tr_flags(std::vector<ISC_SCHAR> & flags) SOCI_NOEXCEPT;
 
     void begin() SOCI_OVERRIDE;
     void commit() SOCI_OVERRIDE;

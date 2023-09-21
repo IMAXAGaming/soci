@@ -372,6 +372,8 @@ struct postgresql_session_backend : details::session_backend
     void begin() SOCI_OVERRIDE;
     void commit() SOCI_OVERRIDE;
     void rollback() SOCI_OVERRIDE;
+	void commit_retain() SOCI_OVERRIDE;
+    void rollback_retain() SOCI_OVERRIDE;
 
     void deallocate_prepared_statement(const std::string & statementName);
 

@@ -319,9 +319,8 @@ struct firebird_session_backend : details::session_backend
     void begin() SOCI_OVERRIDE;
     void commit() SOCI_OVERRIDE;
     void rollback() SOCI_OVERRIDE;
-
-	void commit_retain();
-    void rollback_retain();
+	void commit_retain() SOCI_OVERRIDE;
+    void rollback_retain() SOCI_OVERRIDE;
 
     bool get_next_sequence_value(session & s,
         std::string const & sequence, long long & value) SOCI_OVERRIDE;

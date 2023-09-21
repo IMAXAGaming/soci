@@ -90,6 +90,16 @@ bool postgresql_session_backend::is_connected()
     return PQstatus(conn_) == CONNECTION_OK;
 }
 
+void postgresql_session_backend::commit_retain()
+{
+    throw soci_error("commit_retain: Not implemented!");
+}
+
+void postgresql_session_backend::rollback_retain()
+{
+    throw soci_error("rollback_retain: Not implemented!");
+}
+
 void postgresql_session_backend::begin()
 {
     // We need to map transaction flags from Firebird/ibase ones
@@ -102,12 +112,14 @@ void postgresql_session_backend::commit()
 {
     hard_exec(*this, conn_, "COMMIT", "Cannot commit transaction.");
     in_transaction_ = false;
+    trflags_.clear();
 }
 
 void postgresql_session_backend::rollback()
 {
     hard_exec(*this, conn_, "ROLLBACK", "Cannot rollback transaction.");
     in_transaction_ = false;
+    trflags_.clear();
 }
 
 void postgresql_session_backend::deallocate_prepared_statement(
@@ -129,11 +141,18 @@ bool postgresql_session_backend::get_next_sequence_value(
 
 void postgresql_session_backend::clean_up()
 {
+    if (in_transaction_)
+    {
+        commit();
+    }
+
     if (0 != conn_)
     {
         PQfinish(conn_);
         conn_ = 0;
     }
+
+    trflags_.clear();
 }
 
 std::string postgresql_session_backend::get_next_statement_name()

@@ -279,6 +279,8 @@ public:
 	virtual void begin() = 0;
     virtual void commit() = 0;
     virtual void rollback() = 0;
+    virtual void commit_retain() = 0;
+    virtual void rollback_retain() = 0;
 
     // At least one of these functions is usually not implemented for any given
     // backend as RDBMS support either sequences or auto-generated values, so

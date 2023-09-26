@@ -66,12 +66,13 @@ enum statement_type
 // transaction flags
 enum transaction_flag
 {
-    trf_read,
-    trf_write,
-    trf_read_commited,
-    trf_rec_version,
-    trf_wait,
-    trf_nowait,
+    trf_none            = 0,
+    trf_read            = (1 < 0),
+    trf_write           = (1 < 1),
+    trf_read_commited   = (1 < 2),
+    trf_rec_version     = (1 < 3),
+    trf_wait            = (1 << 4),
+    trf_nowait          = (1 << 5),
 };
 
 // polymorphic into type backend
@@ -277,8 +278,8 @@ public:
     virtual bool is_connected() = 0;
 
     virtual bool is_in_transaction() const SOCI_NOEXCEPT = 0;
-    void set_transaction_flags(const std::vector<transaction_flag>& flags) { trflags_ = flags; };
-	const std::vector<transaction_flag>& active_transaction_flags() const { return is_in_transaction() ? trflags_ : NoTRFlags; };
+    void set_transaction_flags(const transaction_flag flags) { trflags_ = flags; };
+	transaction_flag active_transaction_flags() const { return is_in_transaction() ? trflags_ : transaction_flag::trf_none; };
 
 	virtual void begin() = 0;
     virtual void commit() = 0;
@@ -483,8 +484,7 @@ private:
     SOCI_NOT_COPYABLE(session_backend)
 
 protected:
-    std::vector<transaction_flag> trflags_;
-    const std::vector<transaction_flag> NoTRFlags;
+    transaction_flag trflags_;
 };
 
 } // namespace details

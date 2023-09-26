@@ -276,30 +276,19 @@ void firebird_session_backend::convert_tr_flags(std::vector<ISC_SCHAR> & flags) 
 {
     if (flags.empty())
         flags.push_back((ISC_SCHAR)isc_tpb_version3);
-    for (auto trf : trflags_)
-    {
-        switch(trf)
-        {
-        case details::trf_read:
-            flags.push_back((ISC_SCHAR)isc_tpb_read);
-            break;
-        case details::trf_write:
+
+    if (trflags_ & details::trf_read)
+        flags.push_back((ISC_SCHAR)isc_tpb_read);
+    if (trflags_ &  details::trf_write)
             flags.push_back((ISC_SCHAR)isc_tpb_write);
-            break;
-        case details::trf_read_commited:
+    if (trflags_ &  details::trf_read_commited)
             flags.push_back((ISC_SCHAR)isc_tpb_read_committed);
-            break;
-        case details::trf_rec_version:
+    if (trflags_ & details::trf_rec_version)
             flags.push_back((ISC_SCHAR)isc_tpb_rec_version);
-            break;
-        case details::trf_wait:
+    if (trflags_ &  details::trf_wait)
             flags.push_back((ISC_SCHAR)isc_tpb_wait);
-            break;
-        case details::trf_nowait:
+    if (trflags_ &  details::trf_nowait)
             flags.push_back((ISC_SCHAR)isc_tpb_nowait);
-            break;
-        }
-    }
 }
 
 void firebird_session_backend::begin()
@@ -373,7 +362,7 @@ void firebird_session_backend::commit()
         }
 
         trhp_ = 0;
-		trflags_.clear();
+		trflags_ = details::trf_none;
     }
 }
 
@@ -389,7 +378,7 @@ void firebird_session_backend::rollback()
         }
 
         trhp_ = 0;
-		trflags_.clear();
+		trflags_ = details::trf_none;
     }
 }
 
@@ -414,7 +403,7 @@ void firebird_session_backend::cleanUp()
         }
 
         trhp_ = 0;
-		trflags_.clear();
+		trflags_ = details::trf_none;
     }
 
 	stop_event_listener();

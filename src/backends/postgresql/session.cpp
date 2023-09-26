@@ -112,14 +112,14 @@ void postgresql_session_backend::commit()
 {
     hard_exec(*this, conn_, "COMMIT", "Cannot commit transaction.");
     in_transaction_ = false;
-    trflags_.clear();
+    trflags_ = details::trf_none;
 }
 
 void postgresql_session_backend::rollback()
 {
     hard_exec(*this, conn_, "ROLLBACK", "Cannot rollback transaction.");
     in_transaction_ = false;
-    trflags_.clear();
+    trflags_ = details::trf_none;
 }
 
 void postgresql_session_backend::deallocate_prepared_statement(
@@ -152,7 +152,7 @@ void postgresql_session_backend::clean_up()
         conn_ = 0;
     }
 
-    trflags_.clear();
+    trflags_ = details::trf_none;
 }
 
 std::string postgresql_session_backend::get_next_statement_name()

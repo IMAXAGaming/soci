@@ -274,8 +274,8 @@ firebird_session_backend::firebird_session_backend(
 
 void firebird_session_backend::convert_tr_flags(std::vector<ISC_SCHAR> & flags) SOCI_NOEXCEPT
 {
-    if (flags.empty())
-        flags.push_back((ISC_SCHAR)isc_tpb_version3);
+    if (!flags.empty() && flags[0] != isc_tpb_version3)
+        flags.insert(flags.begin(), (ISC_SCHAR)isc_tpb_version3);
 
     if (trflags_ & details::trf_read)
         flags.push_back((ISC_SCHAR)isc_tpb_read);

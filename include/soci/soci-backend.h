@@ -67,10 +67,10 @@ enum statement_type
 enum transaction_flag
 {
     trf_none            = 0,
-    trf_read            = (1 < 0),
-    trf_write           = (1 < 1),
-    trf_read_commited   = (1 < 2),
-    trf_rec_version     = (1 < 3),
+    trf_read            = (1 << 0),
+    trf_write           = (1 << 1),
+    trf_read_commited   = (1 << 2),
+    trf_rec_version     = (1 << 3),
     trf_wait            = (1 << 4),
     trf_nowait          = (1 << 5),
 };

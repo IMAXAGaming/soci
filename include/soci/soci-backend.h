@@ -477,6 +477,17 @@ public:
     virtual rowid_backend* make_rowid_backend() = 0;
     virtual blob_backend* make_blob_backend() = 0;
 
+    // Specific functio0n for events
+    void clear_registered_events();
+	void register_event(const std::string& ev);
+	void unregister_event(const std::string& ev);
+
+    virtual void stop_event_listener() = 0;
+	virtual bool start_event_listener() = 0;
+	virtual void trigger_events(std::map<std::string, size_t>& outEvents) = 0;
+    virtual int set_forced_writes(const std::string& server, const std::string& user, const std::string& pass, const std::string& db_file, bool bSync) = 0;
+    virtual int set_reserve_space(const std::string& server, const std::string& user, const std::string& pass, const std::string& db_file) = 0;
+
     failover_callback * failoverCallback_;
     session * session_;
 
@@ -485,6 +496,7 @@ private:
 
 protected:
     transaction_flag trflags_;
+    std::vector<std::string> registered_events_;
 };
 
 } // namespace details

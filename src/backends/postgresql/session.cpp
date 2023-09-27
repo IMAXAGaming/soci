@@ -176,3 +176,39 @@ postgresql_blob_backend * postgresql_session_backend::make_blob_backend()
 {
     return new postgresql_blob_backend(*this);
 }
+
+void postgresql_session_backend::stop_event_listener()
+{
+
+}
+
+bool postgresql_session_backend::start_event_listener()
+{
+    return false;
+}
+
+void trigger_events(std::map<std::string, size_t>& outEvents)
+{
+    SOCI_UNUSED(outEvents);
+}
+
+int postgresql_session_backend::set_forced_writes(const std::string& server, const std::string& user, const std::string& pass, const std::string& db_file, bool bSync)
+{
+    SOCI_UNUSED(server);
+    SOCI_UNUSED(user);
+    SOCI_UNUSED(pass);
+    SOCI_UNUSED(db_file);
+    SOCI_UNUSED(bSync);
+
+    return -1;
+}
+
+int postgresql_session_backend::set_reserve_space(const std::string& server, const std::string& user, const std::string& pass, const std::string& db_file)
+{
+    SOCI_UNUSED(server);
+    SOCI_UNUSED(user);
+    SOCI_UNUSED(pass);
+    SOCI_UNUSED(db_file);
+
+    return -1;
+}

@@ -441,27 +441,6 @@ firebird_blob_backend * firebird_session_backend::make_blob_backend()
     return new firebird_blob_backend(*this);
 }
 
-void firebird_session_backend::clear_registered_events()
-{
-	registered_events_.clear();
-
-	stop_event_listener();
-}
-
-void firebird_session_backend::register_event(const std::string& ev)
-{
-	auto find = std::find(registered_events_.begin(), registered_events_.end(), ev);
-	if (find == registered_events_.end())
-		registered_events_.push_back(ev);
-}
-
-void firebird_session_backend::unregister_event(const std::string& ev)
-{
-	auto find = std::find(registered_events_.begin(), registered_events_.end(), ev);
-	if (find != registered_events_.end())
-		registered_events_.erase(find);
-}
-
 void firebird_session_backend::free_event_buffers()
 {
 	event_buffer_.clear();
@@ -711,4 +690,41 @@ bool firebird_session_backend::start_event_listener()
 	listen();
 
 	return event_listen_handle_;
+}
+
+int firebird_session_backend::set_forced_writes(const std::string& server, const std::string& user, const std::string& pass, const std::string& db_file, bool bSync)
+{
+    isc_svc_handle service_handle;
+    std::vector<ISC_SCHAR> options;
+    int res;
+
+    service_handle = service_connect(server, user, pass);
+    if (service_handle == 0)
+        return -1;
+
+    options.push_back(isc_spb_prp_write_mode);
+    options.push_back(bSync ? isc_spb_prp_wm_sync : isc_spb_prp_wm_async);
+    res = set_db_options(service_handle, db_file, options);
+
+    service_disconnect(service_handle);
+    return res;
+}
+
+int firebird_session_backend::set_reserve_space(const std::string& server, const std::string& user, const std::string& pass, const std::string& db_file)
+{
+    isc_svc_handle service_handle;
+    std::vector<ISC_SCHAR> options;
+    int res;
+
+    service_handle = service_connect(server, user, pass);
+    if (service_handle == 0)
+        return -1;
+
+    options.push_back(isc_spb_prp_reserve_space);
+    options.push_back(isc_spb_prp_res);
+    res = set_db_options(service_handle, db_file, options);
+
+    service_disconnect(service_handle);
+    return res;
+
 }

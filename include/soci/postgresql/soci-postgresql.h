@@ -392,6 +392,12 @@ struct postgresql_session_backend : details::session_backend
 
     std::string get_next_statement_name();
 
+    void stop_event_listener() SOCI_OVERRIDE;
+	bool start_event_listener() SOCI_OVERRIDE;
+	void trigger_events(std::map<std::string, size_t>& outEvents) SOCI_OVERRIDE;
+    int set_forced_writes(const std::string& server, const std::string& user, const std::string& pass, const std::string& db_file, bool bSync) SOCI_OVERRIDE;
+    int set_reserve_space(const std::string& server, const std::string& user, const std::string& pass, const std::string& db_file) SOCI_OVERRIDE;
+
     int statementCount_;
     bool single_row_mode_;
     PGconn * conn_;

@@ -594,3 +594,24 @@ blob_backend * session::make_blob_backend()
 
     return backEnd_->make_blob_backend();
 }
+
+void session_backend::clear_registered_events()
+{
+    registered_events_.clear();
+
+	stop_event_listener();
+}
+
+void session_backend::register_event(const std::string& ev)
+{
+    auto find = std::find(registered_events_.begin(), registered_events_.end(), ev);
+	if (find == registered_events_.end())
+		registered_events_.push_back(ev);
+}
+
+void session_backend::unregister_event(const std::string& ev)
+{
+	auto find = std::find(registered_events_.begin(), registered_events_.end(), ev);
+	if (find != registered_events_.end())
+		registered_events_.erase(find);
+}

@@ -346,27 +346,18 @@ struct firebird_session_backend : details::session_backend
 
     isc_db_handle dbhp_;
 
-	void clear_registered_events();
-
-	void register_event(const std::string& ev);
-
-	void unregister_event(const std::string& ev);
-
-	void stop_event_listener();
-
-	bool start_event_listener();
-
-	void trigger_events(std::map<std::string, size_t>& outEvents);
-
 	isc_svc_handle service_connect(const std::string& server, const std::string& user, const std::string& pass);
-
 	void service_disconnect(isc_svc_handle handle);
-
 	int set_db_options(isc_svc_handle handle, const std::string& database_file, const std::vector<ISC_SCHAR>& options);
+
+    void stop_event_listener() SOCI_OVERRIDE;
+	bool start_event_listener() SOCI_OVERRIDE;
+	void trigger_events(std::map<std::string, size_t>& outEvents) SOCI_OVERRIDE;
+    int set_forced_writes(const std::string& server, const std::string& user, const std::string& pass, const std::string& db_file, bool bSync) SOCI_OVERRIDE;
+    int set_reserve_space(const std::string& server, const std::string& user, const std::string& pass, const std::string& db_file) SOCI_OVERRIDE;
 
 private:
 	std::atomic<bool> has_events_ = false;
-	std::vector<std::string> registered_events_;
 	std::mutex event_listener_mutex_;
 	ISC_LONG event_listen_handle_ = 0;
 	std::vector<uint8_t> event_buffer_;

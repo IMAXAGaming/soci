@@ -289,6 +289,8 @@ void firebird_session_backend::convert_tr_flags(std::vector<ISC_SCHAR> & flags) 
             flags.push_back((ISC_SCHAR)isc_tpb_wait);
     if (trflags_ &  details::trf_nowait)
             flags.push_back((ISC_SCHAR)isc_tpb_nowait);
+    if (trflags_ &  details::trf_concurrency)
+            flags.push_back((ISC_SCHAR)isc_tpb_concurrency);
 }
 
 void firebird_session_backend::begin()

@@ -73,6 +73,7 @@ enum transaction_flag
     trf_rec_version     = (1 << 3),
     trf_wait            = (1 << 4),
     trf_nowait          = (1 << 5),
+    trf_concurrency     = (1 << 6),
 };
 
 // polymorphic into type backend

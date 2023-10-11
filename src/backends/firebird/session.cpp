@@ -299,6 +299,8 @@ void firebird_session_backend::begin()
     {
         std::vector<ISC_SCHAR> local_flags;
         ISC_STATUS stat[stat_size];
+
+        local_flags.push_back((ISC_SCHAR)isc_tpb_version3);
         convert_tr_flags(local_flags);
         if (isc_start_transaction(stat, &trhp_, 1, &dbhp_, local_flags.size(), local_flags.data()))
         {

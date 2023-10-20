@@ -488,7 +488,12 @@ class event_iterator
 		return *this;
 	}
 
-	bool operator==(uint8_t* buf_pos) const
+	bool operator<(const uint8_t* buf_pos) const
+	{
+		return pos < buf_pos;
+	}
+
+	bool operator==(const uint8_t* buf_pos) const
 	{
 		return pos == buf_pos;
 	}
@@ -538,7 +543,7 @@ void firebird_session_backend::event_handler(void* object, ISC_USHORT size, cons
 		std::memcpy(backend->event_results_.data(), tmpbuffer, size);
 
 		event_iterator prev_state = backend->event_buffer_.data();
-		for (event_iterator new_state = backend->event_results_.data(); new_state != backend->event_results_.data() + size; ++new_state, ++prev_state)
+		for (event_iterator new_state = backend->event_results_.data(); new_state < backend->event_results_.data() + size; ++new_state, ++prev_state)
 		{
 			const uint32_t prev_num_triggered = prev_state.get_count();
 			const uint32_t num_triggered = new_state.get_count();

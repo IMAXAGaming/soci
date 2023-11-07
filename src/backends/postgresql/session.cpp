@@ -187,7 +187,7 @@ bool postgresql_session_backend::start_event_listener()
     return false;
 }
 
-void trigger_events(std::map<std::string, size_t>& outEvents)
+void postgresql_session_backend::trigger_events(std::map<std::string, size_t>& outEvents)
 {
     SOCI_UNUSED(outEvents);
 }

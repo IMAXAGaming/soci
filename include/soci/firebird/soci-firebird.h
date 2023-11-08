@@ -314,18 +314,14 @@ struct firebird_session_backend : details::session_backend
 
     bool is_connected() SOCI_OVERRIDE;
 
-	bool is_in_transaction() const SOCI_NOEXCEPT;
-
-	void set_transaction_flags(const std::vector<ISC_SCHAR>& flags);
-
-	const std::vector<ISC_SCHAR>& active_transaction_flags() const;
+    bool is_in_transaction() const SOCI_NOEXCEPT SOCI_OVERRIDE;
+    void convert_tr_flags(std::vector<ISC_SCHAR> & flags) SOCI_NOEXCEPT;
 
     void begin() SOCI_OVERRIDE;
     void commit() SOCI_OVERRIDE;
     void rollback() SOCI_OVERRIDE;
-
-	void commit_retain();
-    void rollback_retain();
+	void commit_retain() SOCI_OVERRIDE;
+    void rollback_retain() SOCI_OVERRIDE;
 
     bool get_next_sequence_value(session & s,
         std::string const & sequence, long long & value) SOCI_OVERRIDE;
@@ -350,34 +346,24 @@ struct firebird_session_backend : details::session_backend
 
     isc_db_handle dbhp_;
 
-	void clear_registered_events();
-
-	void register_event(const std::string& ev);
-
-	void unregister_event(const std::string& ev);
-
-	void stop_event_listener();
-
-	bool start_event_listener();
-
-	void trigger_events(std::map<std::string, size_t>& outEvents);
-
 	isc_svc_handle service_connect(const std::string& server, const std::string& user, const std::string& pass);
-
 	void service_disconnect(isc_svc_handle handle);
-
 	int set_db_options(isc_svc_handle handle, const std::string& database_file, const std::vector<ISC_SCHAR>& options);
+
+    void stop_event_listener() SOCI_OVERRIDE;
+	bool start_event_listener() SOCI_OVERRIDE;
+	void trigger_events(std::map<std::string, size_t>& outEvents) SOCI_OVERRIDE;
+    int set_forced_writes(const std::string& server, const std::string& user, const std::string& pass, const std::string& db_file, bool bSync) SOCI_OVERRIDE;
+    int set_reserve_space(const std::string& server, const std::string& user, const std::string& pass, const std::string& db_file) SOCI_OVERRIDE;
 
 private:
 	std::atomic<bool> has_events_ = false;
-	std::vector<std::string> registered_events_;
 	std::mutex event_listener_mutex_;
 	ISC_LONG event_listen_handle_ = 0;
 	std::vector<uint8_t> event_buffer_;
 	std::vector<uint8_t> event_results_;
 	std::map<std::string, size_t> triggered_events_;
 
-	std::vector<ISC_SCHAR> trflags_;
     isc_tr_handle trhp_;
     bool decimals_as_strings_;
 

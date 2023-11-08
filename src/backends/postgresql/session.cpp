@@ -90,19 +90,36 @@ bool postgresql_session_backend::is_connected()
     return PQstatus(conn_) == CONNECTION_OK;
 }
 
+void postgresql_session_backend::commit_retain()
+{
+    throw soci_error("commit_retain: Not implemented!");
+}
+
+void postgresql_session_backend::rollback_retain()
+{
+    throw soci_error("rollback_retain: Not implemented!");
+}
+
 void postgresql_session_backend::begin()
 {
+    // We need to map transaction flags from Firebird/ibase ones
+    // to the ones PostgreSQL uses.
+    in_transaction_ = true;
     hard_exec(*this, conn_, "BEGIN", "Cannot begin transaction.");
 }
 
 void postgresql_session_backend::commit()
 {
     hard_exec(*this, conn_, "COMMIT", "Cannot commit transaction.");
+    in_transaction_ = false;
+    trflags_ = details::trf_none;
 }
 
 void postgresql_session_backend::rollback()
 {
     hard_exec(*this, conn_, "ROLLBACK", "Cannot rollback transaction.");
+    in_transaction_ = false;
+    trflags_ = details::trf_none;
 }
 
 void postgresql_session_backend::deallocate_prepared_statement(
@@ -124,11 +141,18 @@ bool postgresql_session_backend::get_next_sequence_value(
 
 void postgresql_session_backend::clean_up()
 {
+    if (in_transaction_)
+    {
+        commit();
+    }
+
     if (0 != conn_)
     {
         PQfinish(conn_);
         conn_ = 0;
     }
+
+    trflags_ = details::trf_none;
 }
 
 std::string postgresql_session_backend::get_next_statement_name()
@@ -151,4 +175,40 @@ postgresql_rowid_backend * postgresql_session_backend::make_rowid_backend()
 postgresql_blob_backend * postgresql_session_backend::make_blob_backend()
 {
     return new postgresql_blob_backend(*this);
+}
+
+void postgresql_session_backend::stop_event_listener()
+{
+
+}
+
+bool postgresql_session_backend::start_event_listener()
+{
+    return false;
+}
+
+void postgresql_session_backend::trigger_events(std::map<std::string, size_t>& outEvents)
+{
+    SOCI_UNUSED(outEvents);
+}
+
+int postgresql_session_backend::set_forced_writes(const std::string& server, const std::string& user, const std::string& pass, const std::string& db_file, bool bSync)
+{
+    SOCI_UNUSED(server);
+    SOCI_UNUSED(user);
+    SOCI_UNUSED(pass);
+    SOCI_UNUSED(db_file);
+    SOCI_UNUSED(bSync);
+
+    return -1;
+}
+
+int postgresql_session_backend::set_reserve_space(const std::string& server, const std::string& user, const std::string& pass, const std::string& db_file)
+{
+    SOCI_UNUSED(server);
+    SOCI_UNUSED(user);
+    SOCI_UNUSED(pass);
+    SOCI_UNUSED(db_file);
+
+    return -1;
 }

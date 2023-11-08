@@ -272,25 +272,37 @@ firebird_session_backend::firebird_session_backend(
     }
 }
 
-void firebird_session_backend::set_transaction_flags(const std::vector<ISC_SCHAR>& flags)
+void firebird_session_backend::convert_tr_flags(std::vector<ISC_SCHAR> & flags) SOCI_NOEXCEPT
 {
-	trflags_ = flags;
-	if (!trflags_.empty() && trflags_[0] != isc_tpb_version3)
-		trflags_.insert(trflags_.begin(), isc_tpb_version3);
-}
+    if (!flags.empty() && flags[0] != isc_tpb_version3)
+        flags.insert(flags.begin(), (ISC_SCHAR)isc_tpb_version3);
 
-const std::vector<ISC_SCHAR> NoFlags;
-const std::vector<ISC_SCHAR>& firebird_session_backend::active_transaction_flags() const
-{
-	return is_in_transaction() ? trflags_ : NoFlags;
+    if (trflags_ & details::trf_read)
+        flags.push_back((ISC_SCHAR)isc_tpb_read);
+    if (trflags_ &  details::trf_write)
+            flags.push_back((ISC_SCHAR)isc_tpb_write);
+    if (trflags_ &  details::trf_read_commited)
+            flags.push_back((ISC_SCHAR)isc_tpb_read_committed);
+    if (trflags_ & details::trf_rec_version)
+            flags.push_back((ISC_SCHAR)isc_tpb_rec_version);
+    if (trflags_ &  details::trf_wait)
+            flags.push_back((ISC_SCHAR)isc_tpb_wait);
+    if (trflags_ &  details::trf_nowait)
+            flags.push_back((ISC_SCHAR)isc_tpb_nowait);
+    if (trflags_ &  details::trf_concurrency)
+            flags.push_back((ISC_SCHAR)isc_tpb_concurrency);
 }
 
 void firebird_session_backend::begin()
 {
     if (trhp_ == 0)
     {
+        std::vector<ISC_SCHAR> local_flags;
         ISC_STATUS stat[stat_size];
-        if (isc_start_transaction(stat, &trhp_, 1, &dbhp_, trflags_.size(), trflags_.data()))
+
+        local_flags.push_back((ISC_SCHAR)isc_tpb_version3);
+        convert_tr_flags(local_flags);
+        if (isc_start_transaction(stat, &trhp_, 1, &dbhp_, local_flags.size(), local_flags.data()))
         {
             throw_iscerror(stat);
         }
@@ -354,7 +366,7 @@ void firebird_session_backend::commit()
         }
 
         trhp_ = 0;
-		trflags_.clear();
+		trflags_ = details::trf_none;
     }
 }
 
@@ -370,7 +382,7 @@ void firebird_session_backend::rollback()
         }
 
         trhp_ = 0;
-		trflags_.clear();
+		trflags_ = details::trf_none;
     }
 }
 
@@ -395,7 +407,7 @@ void firebird_session_backend::cleanUp()
         }
 
         trhp_ = 0;
-		trflags_.clear();
+		trflags_ = details::trf_none;
     }
 
 	stop_event_listener();
@@ -431,27 +443,6 @@ details::rowid_backend* firebird_session_backend::make_rowid_backend()
 firebird_blob_backend * firebird_session_backend::make_blob_backend()
 {
     return new firebird_blob_backend(*this);
-}
-
-void firebird_session_backend::clear_registered_events()
-{
-	registered_events_.clear();
-
-	stop_event_listener();
-}
-
-void firebird_session_backend::register_event(const std::string& ev)
-{
-	auto find = std::find(registered_events_.begin(), registered_events_.end(), ev);
-	if (find == registered_events_.end())
-		registered_events_.push_back(ev);
-}
-
-void firebird_session_backend::unregister_event(const std::string& ev)
-{
-	auto find = std::find(registered_events_.begin(), registered_events_.end(), ev);
-	if (find != registered_events_.end())
-		registered_events_.erase(find);
 }
 
 void firebird_session_backend::free_event_buffers()
@@ -534,7 +525,7 @@ void firebird_session_backend::event_handler(void* object, ISC_USHORT size, cons
 	// dismiss those calls.
 	if (object == nullptr || size == 0 || tmpbuffer == nullptr)
 		return;
-		
+
 	firebird_session_backend* backend = (firebird_session_backend*)object;
 
 	std::lock_guard lock(backend->event_listener_mutex_);
@@ -633,7 +624,7 @@ int firebird_session_backend::set_db_options(isc_svc_handle handle, const std::s
 		printf("Service could not be started: %d\n", ret);
 		return ret;
 	}
-	
+
 	return wait_for_service_result(handle);
 }
 
@@ -652,14 +643,14 @@ int firebird_session_backend::wait_for_service_result(isc_svc_handle handle)
 			printf("Service query failed: %d\n", ret);
 			return ret;
 		}
-		
+
 		size_t pos = std::find(result.begin(), result.end(), isc_info_svc_line) - result.begin();
 		if (pos >= result.size())
 		{
 			printf("Bad service query response!\n");
 			return -1;
 		}
-		
+
 		int str_len = isc_portable_integer(reinterpret_cast<const ISC_UCHAR*>(result.data() + pos + 1), 2);
 		if (str_len == 0) // If message length is	zero bytes,	task is	finished
 			return 0;
@@ -685,7 +676,7 @@ void isc_event_block_from_vector(std::vector<uint8_t>& event_buffer, std::vector
 
 	for(const std::string& ev : events)
 	{
-		event_buffer[offset++] = ev.length(); 
+		event_buffer[offset++] = ev.length();
 		std::memcpy(event_buffer.data() + offset, ev.c_str(), ev.length());
 		offset += ev.length() + 4; // 4 bytes for event count
 	}
@@ -695,7 +686,7 @@ bool firebird_session_backend::start_event_listener()
 {
 	if (event_listen_handle_)
 		return false;
-	
+
 	if (registered_events_.empty())
 		return false;
 
@@ -708,4 +699,41 @@ bool firebird_session_backend::start_event_listener()
 	listen();
 
 	return event_listen_handle_;
+}
+
+int firebird_session_backend::set_forced_writes(const std::string& server, const std::string& user, const std::string& pass, const std::string& db_file, bool bSync)
+{
+    isc_svc_handle service_handle;
+    std::vector<ISC_SCHAR> options;
+    int res;
+
+    service_handle = service_connect(server, user, pass);
+    if (service_handle == 0)
+        return -1;
+
+    options.push_back(isc_spb_prp_write_mode);
+    options.push_back(bSync ? isc_spb_prp_wm_sync : isc_spb_prp_wm_async);
+    res = set_db_options(service_handle, db_file, options);
+
+    service_disconnect(service_handle);
+    return res;
+}
+
+int firebird_session_backend::set_reserve_space(const std::string& server, const std::string& user, const std::string& pass, const std::string& db_file)
+{
+    isc_svc_handle service_handle;
+    std::vector<ISC_SCHAR> options;
+    int res;
+
+    service_handle = service_connect(server, user, pass);
+    if (service_handle == 0)
+        return -1;
+
+    options.push_back(isc_spb_prp_reserve_space);
+    options.push_back(isc_spb_prp_res);
+    res = set_db_options(service_handle, db_file, options);
+
+    service_disconnect(service_handle);
+    return res;
+
 }

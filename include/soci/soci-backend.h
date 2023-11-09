@@ -479,9 +479,9 @@ public:
     virtual blob_backend* make_blob_backend() = 0;
 
     // Specific functio0n for events
-    void clear_registered_events();
-	void register_event(const std::string& ev);
-	void unregister_event(const std::string& ev);
+	SOCI_DECL void clear_registered_events();
+	SOCI_DECL void register_event(const std::string& ev);
+	SOCI_DECL void unregister_event(const std::string& ev);
 
     virtual void stop_event_listener() = 0;
 	virtual bool start_event_listener() = 0;

@@ -150,6 +150,16 @@ void postgresql_statement_backend::prepare(std::string const & query,
                     state = in_name;
                 }
             }
+            /*
+             * Support also position independent parameters, where we use ? symbol, so we
+             * are compatible with Firebird backend.
+             */
+            else if (*it == '?')
+            {
+		std::ostringstream ss;
+		ss << '$' << position++;
+		query_ += ss.str();
+            }
             else // regular character, stay in the same state
             {
                 query_ += *it;

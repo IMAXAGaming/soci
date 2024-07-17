@@ -292,7 +292,7 @@ endfunction()
 #
 function(boost_report_value NAME)
   string(LENGTH "${NAME}" varlen)
-  # LOG
+  # TLOG
   #message(STATUS "boost_report_value: NAME=${NAME} (${varlen})")
   #message(STATUS "boost_report_value: \${NAME}=${${NAME}}")
   math(EXPR padding_len 40-${varlen})

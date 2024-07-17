@@ -242,7 +242,7 @@ macro(soci_backend NAME)
     boost_report_value(${THIS_BACKEND_INCLUDE_DIRECTORIES_VAR})
   endif()
 
-  # LOG
+  # TLOG
   #message("soci_backend:")
   #message("NAME: ${NAME}")
   #message("${THIS_BACKEND_OPTION} = ${SOCI_BACKEND_SQLITE3}")
